@@ -1,5 +1,5 @@
 PROJECT_NAME           = "AIO"
-PROJECT_NUMBER         = 0.0.41
+PROJECT_NUMBER         = 0.1.0
 PROJECT_BRIEF          = "Low-level, data-oriented asynchronous I/O library for C++20"
 OUTPUT_DIRECTORY       = @CMAKE_CURRENT_SOURCE_DIR@/docs/out/
 INPUT                  = @CMAKE_CURRENT_SOURCE_DIR@/include/aio
