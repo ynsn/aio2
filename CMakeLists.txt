@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.30)
 project(aio2)
 
 add_subdirectory(external/tracy)
+add_subdirectory(external/libuv)
 
 find_package(Doxygen)
 if (DOXYGEN_FOUND)
@@ -26,5 +27,5 @@ endif (DOXYGEN_FOUND)
 set(CMAKE_CXX_STANDARD 20)
 
 add_executable(aio2 main.cpp)
-target_include_directories(aio2 PRIVATE include external/tracy/public)
-target_link_libraries(aio2 PRIVATE Tracy::TracyClient)
+target_include_directories(aio2 PRIVATE include external/tracy/public external/libuv/include)
+target_link_libraries(aio2 PRIVATE Tracy::TracyClient libuv::libuv)
