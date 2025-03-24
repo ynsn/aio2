@@ -30,6 +30,14 @@
 #define AIO_RESULT_HPP
 
 namespace aio {
+
+  /**
+   * \defgroup result Result
+   * \brief The `result` module provides facilities for error handling without exceptions and forcing the user to check and handle errors.
+   */
+
+  /// \ingroup result
+  /// \brief The `result<T, E>` class is a utility for handling errors without exceptions.
   template <class T, class E>
   class [[nodiscard]] result;
 }  // namespace aio
