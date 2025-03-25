@@ -30,6 +30,7 @@
 #define AIO_COROUTINE_HPP
 
 #include <coroutine>
+#include <exception>
 
 #include "detail/macros.hpp"
 
@@ -264,6 +265,80 @@ namespace aio {
     requires aio::awaitable<Awaitable, Promise>
   using await_result_t =
       decltype(detail::as_lvalue(aio::get_awaiter(std::declval<Awaitable>(), static_cast<Promise *>(nullptr))).await_resume());
+
+  template <class Promise = void>
+  class continuation_handle;
+
+  /// \ingroup coroutine
+  ///
+  /// \brief Specialization of continuation_handle for void promise types
+  ///
+  /// This class provides a type-erased wrapper around coroutine handles that can
+  /// manage continuations regardless of the specific promise type. It particularly
+  /// handles the case of coroutines that might be stopped without special handling
+  /// elsewhere in the code.
+  ///
+  /// The void specialization enables working with arbitrary coroutine handles through
+  /// a common interface, while preserving type-specific behavior for unhandled
+  /// stopped coroutines.
+  ///
+  /// \see continuation_handle The primary template that this specializes
+  template <>
+  class continuation_handle<void> {
+   public:
+    constexpr continuation_handle() = default;
+    template <class Promise>
+    constexpr explicit continuation_handle(std::coroutine_handle<Promise> coro) noexcept : _handle(coro) {
+      if constexpr (requires(Promise &promise) { promise.unhandled_stopped(); }) {
+        _callback = [](void *addr) noexcept -> std::coroutine_handle<> {
+          return std::coroutine_handle<Promise>::from_address(addr).promise().unhandled_stopped();
+        };
+      }
+    }
+
+   public:
+    [[nodiscard]] constexpr auto handle() const noexcept -> std::coroutine_handle<> { return _handle; }
+    [[nodiscard]] constexpr auto unhandled_stopped() const noexcept -> std::coroutine_handle<> {
+      return _callback(_handle.address());
+    }
+
+   private:
+    using callback_type = auto (*)(void *) noexcept -> std::coroutine_handle<>;
+
+    std::coroutine_handle<> _handle{};
+    callback_type _callback = [](void *) noexcept -> std::coroutine_handle<> { std::terminate(); };
+  };
+
+  /// \ingroup coroutine
+  ///
+  /// \brief Primary template for continuation_handle that wraps coroutine handles with specific promise types
+  ///
+  /// This class template provides a wrapper around coroutine handles with known promise types,
+  /// allowing for type-safe access to the underlying coroutine while still supporting
+  /// the unhandled stopped case. Unlike the void specialization, this template preserves
+  /// the static type information of the promise.
+  ///
+  /// \tparam Promise The specific promise type of the wrapped coroutine handle
+  ///
+  /// \see continuation_handle<void> The specialization that handles type erasure
+  template <class Promise>
+  class continuation_handle {
+   public:
+    constexpr continuation_handle() = default;
+    constexpr explicit continuation_handle(std::coroutine_handle<Promise> coro) noexcept : _handle(coro) {}
+
+   public:
+    [[nodiscard]] constexpr auto handle() const noexcept -> std::coroutine_handle<Promise> {
+      return std::coroutine_handle<Promise>::from_address(_handle.handle().address());
+    }
+
+    [[nodiscard]] constexpr auto unhanded_stopped() const noexcept -> std::coroutine_handle<> {
+      return _handle.unhandled_stopped();
+    }
+
+   private:
+    continuation_handle<> _handle{};
+  };
 }  // namespace aio
 
 #endif  // AIO_COROUTINE_HPP
